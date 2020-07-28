@@ -12,33 +12,47 @@ app.use(express.static('build'))
 morgan.token('body', (req, res) => JSON.stringify(req.body))
 app.use(morgan(':method :url :status :res[content-length] - :response-time ms :body'))
 
-app.get('/', (req, res) => {
-    res.send('<h1>Phonebook backend</h1>')
+
+app.get('/info', async (req, res) => {
+    const count = await Person.countDocuments({})
+    res.send(`<p>There are ${count} contacts in your phonebook</p>`)
 })
 
-app.get('/api/persons', async (req, res) => {
+app.get('/api/persons', async (req, res, next) => {
     try {
         const people = await Person.find({})
-        res.json(people)
+
+        if (people) {
+            res.json(people)
+        } else {
+            res.status(404).end()
+        }
     } catch (error) {
-        res.status(404).end()
+        next(error)
     }
 })
 
-app.get('/api/persons/:id', async (req, res) => {
+app.get('/api/persons/:id', async (req, res, next) => {
     try {
         const person = await Person.findById(req.params.id)
-        res.json(person)
+
+        if (person) {
+            res.json(person)
+        } else {
+            res.status(404).end()
+        }
     } catch (error) {
-        res.status(404).end()
+        next(error)
     }
 })
 
-app.delete('/api/persons/:id', (req, res) => {
-    const id = Number(req.params.id)
-    persons = persons.filter(person => person.id !== id)
-
-    res.status(204).end()
+app.delete('/api/persons/:id', async (req, res, next) => {
+    try {
+        await Person.findByIdAndRemove(req.params.id)
+        res.status(204).end()
+    } catch (error) {
+        next(error)
+    }
 })
 
 
@@ -64,11 +78,39 @@ app.post('/api/persons', async (req, res) => {
     }
 })
 
+app.put('/api/persons/:id', async (req, res, next) => {
+    const body = req.body
+
+    const person = {
+        name: body.name,
+        number: body.number
+    }
+
+    try {
+        const updatedPerson = await Person.findByIdAndUpdate(req.params.id, person, { new: true })
+        res.json(updatedPerson)
+    } catch (error) {
+        next(error)
+    }
+})
+
 const unknownEndpoint = (req, res) => {
     res.status(404).send({ error: 'unknown endpoint' })
 }
 
 app.use(unknownEndpoint)
+
+const errorHandler = (error, req, res, next) => {
+    console.log(error.message)
+
+    if (error.name === 'CastError' || error.name === 'ReferenceError') {
+        return res.status(400).send({ error: 'malformatted id' })
+    }
+
+    next(error)
+}
+
+app.use(errorHandler)
 
 const PORT = process.env.PORT
 
