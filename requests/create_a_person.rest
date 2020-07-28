@@ -5,3 +5,33 @@ Content-Type: application/json
     "name": "Jeff Bezos",
     "number": "333-444-555"
 }
+
+###
+
+POST http://localhost:3001/api/persons
+Content-Type: application/json
+
+{
+    "name": "Elon Musk",
+    "number": "333-444-555"
+}
+
+###
+
+POST http://localhost:3001/api/persons
+Content-Type: application/json
+
+{
+    "name": "Marc Simoncini",
+    "number": "333"
+}
+
+###
+
+POST http://localhost:3001/api/persons
+Content-Type: application/json
+
+{
+    "name": "Marc",
+    "number": "323-444-555"
+}
