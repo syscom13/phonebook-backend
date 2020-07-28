@@ -1,30 +1,10 @@
+require('dotenv').config()
 const express = require('express')
 const app = express()
+const Person = require('./models/person')
+
 const cors = require('cors')
 const morgan = require('morgan')
-
-let persons = [
-    {
-        name: 'Arto Hellas', 
-        number: '040-123456',
-        id: 1
-    },
-    {
-        name: 'Ada Lovelace', 
-        number: '39-44-5323523',
-        id: 2
-    },
-    {
-        name: 'Dan Abramov', 
-        number: '12-43-234345',
-        id: 3
-    },
-    {
-        name: 'Mary Poppendieck', 
-        number: '39-23-6423122',
-        id: 4
-    }
-]
 
 app.use(express.json())
 app.use(cors())
@@ -36,26 +16,20 @@ app.get('/', (req, res) => {
     res.send('<h1>Phonebook backend</h1>')
 })
 
-app.get('/info', (req, res) => {
-    const page = `<p>Phonebook has info for ${persons.length} people</p>
-    <p>${new Date()}</p>`
-
-    res.send(page)
+app.get('/api/persons', async (req, res) => {
+    try {
+        const people = await Person.find({})
+        res.json(people)
+    } catch (error) {
+        res.status(404).end()
+    }
 })
 
-app.get('/api/persons', (req, res) => {
-    res.json(persons)
-})
-
-app.get('/api/persons/:id', (req, res) => {
-    const id = Number(req.params.id)
-    const person = persons.find(p => p.id === id)
-
-    console.log(person)
-
-    if (person) {
+app.get('/api/persons/:id', async (req, res) => {
+    try {
+        const person = await Person.findById(req.params.id)
         res.json(person)
-    } else {
+    } catch (error) {
         res.status(404).end()
     }
 })
@@ -67,13 +41,9 @@ app.delete('/api/persons/:id', (req, res) => {
     res.status(204).end()
 })
 
-const generateId = () => {
-    return Math.floor(Math.random()*100000)
-}
 
-app.post('/api/persons', (req, res) => {
+app.post('/api/persons', async (req, res) => {
     const body = req.body
-    const personExits = persons.some(person => person.name === body.name)
 
     if (!body.name || !body.number) {
         return res.status(400).json({ 
@@ -81,20 +51,17 @@ app.post('/api/persons', (req, res) => {
         })
     }
 
-    if (personExits) {
-        return res.status(400).json({
-            error: 'name must be unique'
-        })
-    }
-
-    const person = {
+    const person = new Person({
         name: body.name,
-        number: body.number,
-        id: generateId()
-    }
+        number: body.number
+    })
 
-    persons = persons.concat(person)
-    res.json(person)
+    try {
+        const savedPerson = await person.save()
+        res.json(savedPerson)
+    } catch (error) {
+        console.log(error)
+    }
 })
 
 const unknownEndpoint = (req, res) => {
@@ -103,7 +70,7 @@ const unknownEndpoint = (req, res) => {
 
 app.use(unknownEndpoint)
 
-const PORT = process.env.PORT || 3001
+const PORT = process.env.PORT
 
 app.listen(PORT, () => {
     console.log(`Server listening on port ${PORT}`)
